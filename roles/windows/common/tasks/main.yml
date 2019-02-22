@@ -1,18 +1,18 @@
 ---
-- name: Configure proxy
-  block:
-    - name: Set proxy environment variables for all users
-      win_environment:
-        state: present
-        name: "{{ item.key }}"
-        value: "{{ item.value }}"
-        level: machine
-      with_dict:
-        HTTP_PROXY: "{{ http_proxy }}"
-        HTTPS_PROXY: "{{ https_proxy }}"
-        NO_PROXY: "{{ no_proxy }}"
-  when: configure_proxy|bool|default(false)
-  tags: [init, join]
+# - name: Configure proxy
+#   block:
+#     - name: Set proxy environment variables for all users
+#       win_environment:
+#         state: present
+#         name: "{{ item.key }}"
+#         value: "{{ item.value }}"
+#         level: machine
+#       with_dict:
+#         HTTP_PROXY: "{{ http_proxy }}"
+#         HTTPS_PROXY: "{{ https_proxy }}"
+#         NO_PROXY: "{{ no_proxy }}"
+#   when: configure_proxy|bool|default(false)
+#   tags: [init, join]
 
 # TODO: Add settings for windows update behind proxy
 # https://support.microsoft.com/en-us/help/900935/how-the-windows-update-client-determines-which-proxy-server-to-use-to
@@ -26,20 +26,20 @@
 #    allow_clobber: yes
 #    state: absent
 
-- name: Install common packages using chocolatey with proxy
-  win_chocolatey:
-    name: "{{ item.name }}"
-    proxy_url: "{{ win_choco_proxy_url }}"
-    proxy_username: "{{ win_choco_proxy_username }}"
-    proxy_password: "{{ win_choco_proxy_password }}"
-  with_items: "{{ win_common_packages }}"
-  when: configure_proxy
+# - name: Install common packages using chocolatey with proxy
+#   win_chocolatey:
+#     name: "{{ item.name }}"
+#     proxy_url: "{{ win_choco_proxy_url }}"
+#     proxy_username: "{{ win_choco_proxy_username }}"
+#     proxy_password: "{{ win_choco_proxy_password }}"
+#   with_items: "{{ win_common_packages }}"
+#   when: configure_proxy
 
 - name: Install common packages using chocolatey without proxy
   win_chocolatey:
     name: "{{ item.name }}"
   with_items: "{{ win_common_packages }}"
-  when: not configure_proxy
+  # when: not configure_proxy
 #
 # - name: Ensure that Microsoft SDN directory exists
 #   win_file:
@@ -54,18 +54,18 @@
 #   when: microsoft_sdn_dir_state.changed
 
 # TODO: use win_domain_membership and use regular domain registration if requested
-- name: Change hostname if required
-  block:
-    - name: Check current hostname
-      win_shell: $(Get-ComputerInfo -Property "CsName").CsName
-      register: current_hostname_state
-      changed_when: False
-    - name: Change hostname
-      win_shell: Rename-Computer -NewName "{{ kubernetes_node_hostname|trim }}"
-      register: hostname_change_state
-      when: kubernetes_node_hostname|lower|trim != current_hostname_state.stdout|lower|trim
-  when: kubernetes_node_hostname != ""
-  tags: [init, join]
+# - name: Change hostname if required
+#   block:
+#     - name: Check current hostname
+#       win_shell: $(Get-ComputerInfo -Property "CsName").CsName
+#       register: current_hostname_state
+#       changed_when: False
+#     - name: Change hostname
+#       win_shell: Rename-Computer -NewName "{{ kubernetes_node_hostname|trim }}"
+#       register: hostname_change_state
+#       when: kubernetes_node_hostname|lower|trim != current_hostname_state.stdout|lower|trim
+#   when: kubernetes_node_hostname != ""
+#   tags: [init, join]
 
 - name: Register Microsoft Update Service instead of default Windows Update Service
   win_shell: "Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -Confirm:$false"

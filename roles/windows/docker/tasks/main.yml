@@ -24,7 +24,7 @@
     when: (docker_metadata.stdout | from_json).Version != win_docker_version
     tags:
       - get_docker_installed
-  
+
   - name: stop docker to be upgraded
     win_service:
       name: "docker"
@@ -110,7 +110,7 @@
   #  script: install_docker_msft.ps1 -RequiredVersion "{{ win_docker_version }}" -ZipNameVersion "{{ win_docker_zip_filename }}"
   #  when: win_docker_provider == 'DockerMsftProvider'
   #  register: install_docker_package_state
-  
+
   # example from: https://groups.google.com/forum/#!searchin/ansible-project/docker$20msft%7Csort:date/ansible-project/CSV335dT0EE/we1qzeLcDQAJ
   - name: Add DockerMsftProvider powershell module repository
     win_psmodule:
@@ -119,18 +119,19 @@
     when: win_docker_provider == 'DockerMsftProvider'
 
   - name: Install Docker package from DockerMsftProvider
-    win_shell: Install-Package –ProviderName "DockerMsftProvider" -Name "Docker" -Force -RequiredVersion "{{ win_docker_version }}" -Verbose
+    # win_shell: Install-Package –ProviderName "DockerMsftProvider" -Name "Docker" -Force -RequiredVersion "{{ win_docker_version }}" -Verbose
+    win_shell: Install-Package Docker -ProviderName DockerMsftProvider -Force
     args:
       creates: "{{ win_docker_metadata_json }}"
     register: install_docker_package_state
     when: win_docker_provider == 'DockerMsftProvider' and not win_use_proxy
 
-  - name: Install Docker package from DockerMsftProvider with Proxy
-    win_shell: Install-Package –ProviderName "DockerMsftProvider" -Name "Docker" -Force -RequiredVersion "{{ win_docker_version }}" -Verbose -Proxy "{{ win_choco_proxy_url }}"
-    args:
-      creates: "{{ win_docker_metadata_json }}"
-    register: install_docker_package_state
-    when: win_docker_provider == 'DockerMsftProvider' and win_use_proxy
+  # - name: Install Docker package from DockerMsftProvider with Proxy
+  #   win_shell: Install-Package –ProviderName "DockerMsftProvider" -Name "Docker" -Force -RequiredVersion "{{ win_docker_version }}" -Verbose -Proxy "{{ win_choco_proxy_url }}"
+  #   args:
+  #     creates: "{{ win_docker_metadata_json }}"
+  #   register: install_docker_package_state
+  #   when: win_docker_provider == 'DockerMsftProvider' and win_use_proxy
 
   when: check_docker_package_state is failed or check_docker_package_state.stdout | trim != win_docker_version
 
@@ -156,7 +157,7 @@
       path: "{{ docker_service_watcher_log_path }}"
       state: directory
       recurse: yes
-   
+
   - name: Create watcher service
     win_nssm:
       name: "{{ docker_service_watcher_service_name }}"
