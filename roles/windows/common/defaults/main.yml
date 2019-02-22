@@ -1,0 +1,26 @@
+---
+nssm_version: latest
+git_version: latest
+openssh_version: latest
+7zip_version: latest
+pswindowsupdate_version: latest
+notepadplusplus_version: latest
+vim_version: latest
+
+win_common_packages:
+  - name: nssm
+  - name: git
+  - name: openssh
+  - name: 7zip
+  - name: pswindowsupdate
+  - name: notepadplusplus
+  - name: vim
+
+# When using proxy you will need also:
+# http://docs.ansible.com/ansible/latest/modules/win_chocolatey_module.html#examples
+win_choco_proxy_url: ""
+win_choco_proxy_username: ""
+win_choco_proxy_password: ""
+
+microsoft_sdn_repo_path: "C:/SDN"
+win_common_install_updates: true

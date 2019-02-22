@@ -1,0 +1,28 @@
+- name: Install Docker on windows nodes
+  hosts: node-windows
+  environment: "{{ env_vars|default({}) }}"
+  gather_facts: no
+  tasks:
+    - import_role:
+        name: windows/common
+      tags:
+        - windows::requirements
+    - import_role:
+        name: windows/docker
+      tags:
+        - windows::requirements
+        - windows::docker
+    # - import_role:
+    #     name: windows/cni
+    #   tags:
+    #     - windows::requirements
+    # - import_role:
+    #     name: windows/kubernetes-node
+    #   tags:
+    #     - windows::requirements
+    #     - windows::node
+    # - import_role:
+    #     name: windows/flannel
+    #   when: kube_network_plugin == 'flannel'
+    #   tags:
+    #     - windows::flannel
