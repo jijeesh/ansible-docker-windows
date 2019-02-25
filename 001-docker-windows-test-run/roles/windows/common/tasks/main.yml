@@ -1,0 +1,4 @@
+# - include_tasks: proxy.yml
+# tasks:
+- name: Check the minimum Windows build number
+  include_tasks: check-build-number.yml

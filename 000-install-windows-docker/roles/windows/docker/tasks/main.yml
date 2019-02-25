@@ -1,0 +1,218 @@
+---
+
+- name: stat win_docker_metadata_json
+  win_stat:
+    path: "{{ win_docker_metadata_json }}"
+  register: win_docker_metadata_stat
+  tags:
+      - get_docker_installed
+
+- name: Verify existent docker installation
+  block:
+
+  - name: read docker metadata.json
+    win_shell: 'type "{{ win_docker_metadata_json }}"'
+    args:
+      executable: cmd
+    register: docker_metadata
+    tags:
+      - get_docker_installed
+
+  - name: debug docker_metadata
+    debug:
+      msg: "{{ (docker_metadata.stdout | from_json).Version  }} is different than desired {{ win_docker_version }}"
+    when: (docker_metadata.stdout | from_json).Version != win_docker_version
+    tags:
+      - get_docker_installed
+
+  - name: stop docker to be upgraded
+    win_service:
+      name: "docker"
+      state: stopped
+      force_dependent_services: yes
+    ignore_errors: yes
+
+  - name: remove metadata file to ensure upgrade will be done
+    win_file:
+      path: "{{ win_docker_metadata_json }}"
+      state: absent
+    when: (docker_metadata.stdout | from_json).Version != win_docker_version
+    tags:
+      - get_docker_installed
+
+  when: win_docker_metadata_stat.stat.exists
+  tags:
+      - get_docker_installed
+
+- name: Install Hyper-V with management tools
+  win_shell: Install-WindowsFeature -Name Hyper-V -IncludeManagementTools -IncludeAllSubFeature
+  when: win_docker_enable_hyperv
+
+- name: Enable Windows Container Feature
+  win_feature:
+    name: Containers
+    state: present
+  register: dockerwindowsfeature
+
+- name: Reboot server if Windows Container Feature requires it
+  win_reboot:
+  when: dockerwindowsfeature.reboot_required
+
+- name: Set linux containers on windows mode
+  win_environment:
+    state: "{{ 'present' if enable_linux_containers_on_windows else 'absent' }}"
+    name: LCOW_SUPPORTED
+    value: 1
+    level: machine
+
+- name: Check if docker is already installed
+  win_shell: (Get-Package -Name Docker -ProviderName {{ win_docker_provider }}).Version
+  ignore_errors: yes
+  changed_when: false
+  register: check_docker_package_state
+
+- block:
+  # Installation docker steps
+  # also applies workaround https://github.com/OneGet/MicrosoftDockerProvider/issues/15#issuecomment-269219021
+
+  - name: Install required version of NuGet Package Provider
+    win_shell: Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+    when: win_docker_provider == 'DockerProvider'
+
+  - name: Install Docker PackageManagement Provider (official from Docker, not Msft)
+    win_shell: Install-Module DockerProvider -Force
+    when: win_docker_provider == 'DockerProvider'
+
+  - name: prepare msft directory to download files
+    win_file:
+      path: "{{ win_docker_temp_dir }}"
+      state: directory
+    when: win_docker_provider == 'DockerMsftProvider'
+
+  - name: Ensure that any old instance of docker is stopped
+    win_service:
+      name: "{{ item }}"
+      state: stopped
+      force_dependent_services: yes
+    with_items:
+      - docker
+    ignore_errors: yes
+
+  - name: Install docker
+    win_shell: Install-Package Docker -ProviderName {{ win_docker_provider }} -Force -RequiredVersion "{{ win_docker_version }}"
+    when: win_docker_provider == 'DockerProvider'
+    register: install_docker_package_state
+
+  # I had to perform the installation in this way to have it installed properly
+  # Run with fixes for https://github.com/OneGet/MicrosoftDockerProvider/issues/15
+  # # Deprecated file, will be removed
+  # - name: Install docker from msft
+  #  script: install_docker_msft.ps1 -RequiredVersion "{{ win_docker_version }}" -ZipNameVersion "{{ win_docker_zip_filename }}"
+  #  when: win_docker_provider == 'DockerMsftProvider'
+  #  register: install_docker_package_state
+
+  # example from: https://groups.google.com/forum/#!searchin/ansible-project/docker$20msft%7Csort:date/ansible-project/CSV335dT0EE/we1qzeLcDQAJ
+  - name: Add DockerMsftProvider powershell module repository
+    win_psmodule:
+      name: DockerMsftProvider
+      state: present
+    when: win_docker_provider == 'DockerMsftProvider'
+
+  - name: Install Docker package from DockerMsftProvider
+    win_shell: Install-Package –ProviderName "DockerMsftProvider" -Name "Docker" -Force -RequiredVersion "{{ win_docker_version }}" -Verbose
+    # win_shell: Install-Package Docker -ProviderName DockerMsftProvider -Force
+    args:
+      creates: "{{ win_docker_metadata_json }}"
+    register: install_docker_package_state
+    when: win_docker_provider == 'DockerMsftProvider' and not win_use_proxy
+
+  # - name: Install Docker package from DockerMsftProvider with Proxy
+  #   win_shell: Install-Package –ProviderName "DockerMsftProvider" -Name "Docker" -Force -RequiredVersion "{{ win_docker_version }}" -Verbose -Proxy "{{ win_choco_proxy_url }}"
+  #   args:
+  #     creates: "{{ win_docker_metadata_json }}"
+  #   register: install_docker_package_state
+  #   when: win_docker_provider == 'DockerMsftProvider' and win_use_proxy
+
+  when: check_docker_package_state is failed or check_docker_package_state.stdout | trim != win_docker_version
+
+- name: Reboot after docker installation
+  win_reboot:
+  when: install_docker_package_state is changed
+
+- name: Ensure that docker service is started properly
+  win_service:
+    name: docker
+    start_mode: auto
+    state: started
+
+- name: Install docker service watcher
+  block:
+  - name: Copy docker service watcher daemon file
+    win_copy:
+      src: docker-service-watcher-daemon.ps1
+      dest: "{{ docker_service_watcher_daemon_path }}"
+
+  - name: Ensure that watcher log directory exists
+    win_file:
+      path: "{{ docker_service_watcher_log_path }}"
+      state: directory
+      recurse: yes
+
+  - name: Create watcher service
+    win_nssm:
+      name: "{{ docker_service_watcher_service_name }}"
+      application: "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+      app_parameters_free_form: "-ExecutionPolicy Bypass -Noninteractive -File '{{ docker_service_watcher_daemon_path }}'"
+      stdout_file: "{{ docker_service_watcher_log_path }}/{{ docker_service_watcher_service_name }}-stdout.log"
+      stderr_file: "{{ docker_service_watcher_log_path }}/{{ docker_service_watcher_service_name }}-stderr.log"
+      state: present
+      start_mode: delayed
+      dependencies: mpssvc # wait for windows firewall service
+
+  - name: Set service restart delay for short executions
+    win_shell: "nssm set {{ docker_service_watcher_service_name }} AppThrottle 1500"
+
+  - name: Set service default failure action to restart
+    win_shell: "nssm set {{ docker_service_watcher_service_name }} AppExit Default Restart"
+
+  - name: Set service restart delay in case of failure
+    win_shell: "nssm set {{ docker_service_watcher_service_name }} AppRestartDelay 1000"
+
+  - name: Set service to not overwrite stdout file
+    win_shell: "nssm set {{ docker_service_watcher_service_name }} AppStdoutCreationDisposition 4"
+
+  - name: Set service to not overwrite stderr file
+    win_shell: "nssm set {{ docker_service_watcher_service_name }} AppStdoutCreationDisposition 4"
+
+  - name: Start watcher service
+    win_service:
+      name: "{{ docker_service_watcher_service_name }}"
+      state: started
+
+  - name: Pull the small Windows Docker Base Image microsoft/nanoserver from hub.docker.com
+    win_shell: docker pull microsoft/nanoserver
+
+  - name: Pull the small Windows Docker Base Image microsoft/nanoserver with tag 1709 from hub.docker.com
+    win_shell: docker pull microsoft/nanoserver:1709
+    when: windows_version == "1709"
+
+  - name: Pull the small Windows Docker Base Image microsoft/nanoserver with tag 1803 from hub.docker.com
+    win_shell: docker pull microsoft/nanoserver:1803
+    when: windows_version == "1803"
+
+#
+# - name: Pull windowsservercore base image from Docker Hub
+#   win_shell: docker pull {{ docker_windowsservercore_image }}
+#   when: win_docker_pull_images
+#
+# - name: Tag selected windowsservercore base image as latest
+#   win_shell: docker tag {{ docker_windowsservercore_image }} microsoft/windowsservercore:latest
+#   when: win_docker_pull_images
+#
+# - name: Pull nanoserver base image from Docker Hub
+#   win_shell: docker pull {{ docker_nanoserver_image }}
+#   when: win_docker_pull_images
+#
+# - name: Tag selected nanoserver base image as latest
+#   win_shell: docker tag {{ docker_nanoserver_image }} microsoft/nanoserver:latest
+#   when: win_docker_pull_images
