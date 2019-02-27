@@ -1,9 +1,9 @@
 # it is suggested that these be encrypted with ansible-vault:
 # ansible-vault edit group_vars/node-windows.yml
 
-ansible_user: admin
+ansible_user: Administrator
 # Ensure you don't have ansible_ssh_pass var set in your own group_vars/all.yml, it will overwrite this.
-ansible_password: password
+ansible_password: password1#
 ansible_port: 5986
 ansible_connection: winrm
 ansible_winrm_transport: ntlm
