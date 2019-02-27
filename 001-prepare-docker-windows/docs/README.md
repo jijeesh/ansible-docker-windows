@@ -56,11 +56,11 @@ your inventory should be defined as:
 ubuntu01 kubernetes_node_hostname=ubuntu01
 
 
-
+```
 
 - Edit windows username and password inside the file inventory/group_vars/node-windows.yml
 
-```
+
 ```
 # Use windows username
 ansible_user: jka
