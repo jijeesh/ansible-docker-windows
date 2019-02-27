@@ -1,7 +1,7 @@
 ---
 enable_linux_containers_on_windows: False
 docker_service_watcher_daemon_path: "C:/ProgramData/Docker/docker-service-watcher-daemon.ps1"
-docker_service_watcher_service_name: docker-service-watcher
+docker_service_watcher_service_name: dockerservicewatcher
 docker_service_watcher_log_path: "C:/var/log"
 
 docker_windowsservercore_image: "microsoft/windowsservercore:1803"  # "microsoft/windowsservercore-insider:10.0.17623.1002"

@@ -161,7 +161,7 @@
   - name: Create watcher service
     win_nssm:
       name: "{{ docker_service_watcher_service_name }}"
-      application: "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+      application: C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
       app_parameters_free_form: "-ExecutionPolicy Bypass -Noninteractive -File '{{ docker_service_watcher_daemon_path }}'"
       stdout_file: "{{ docker_service_watcher_log_path }}/{{ docker_service_watcher_service_name }}-stdout.log"
       stderr_file: "{{ docker_service_watcher_log_path }}/{{ docker_service_watcher_service_name }}-stderr.log"
@@ -201,18 +201,18 @@
     when: windows_version == "1803"
 
 #
-# - name: Pull windowsservercore base image from Docker Hub
-#   win_shell: docker pull {{ docker_windowsservercore_image }}
-#   when: win_docker_pull_images
-#
-# - name: Tag selected windowsservercore base image as latest
-#   win_shell: docker tag {{ docker_windowsservercore_image }} microsoft/windowsservercore:latest
-#   when: win_docker_pull_images
-#
-# - name: Pull nanoserver base image from Docker Hub
-#   win_shell: docker pull {{ docker_nanoserver_image }}
-#   when: win_docker_pull_images
-#
-# - name: Tag selected nanoserver base image as latest
-#   win_shell: docker tag {{ docker_nanoserver_image }} microsoft/nanoserver:latest
-#   when: win_docker_pull_images
+- name: Pull windowsservercore base image from Docker Hub
+  win_shell: docker pull {{ docker_windowsservercore_image }}
+  when: win_docker_pull_images
+
+- name: Tag selected windowsservercore base image as latest
+  win_shell: docker tag {{ docker_windowsservercore_image }} microsoft/windowsservercore:latest
+  when: win_docker_pull_images
+
+- name: Pull nanoserver base image from Docker Hub
+  win_shell: docker pull {{ docker_nanoserver_image }}
+  when: win_docker_pull_images
+
+- name: Tag selected nanoserver base image as latest
+  win_shell: docker tag {{ docker_nanoserver_image }} microsoft/nanoserver:latest
+  when: win_docker_pull_images
