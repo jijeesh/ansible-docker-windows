@@ -9,6 +9,9 @@
 - name: Create directory {{target_path}}, if not there
   win_file: path={{target_path}} state=directory
 
+- name: Copy the contents into {{target_path}}
+  win_copy: src=files/contents dest={{target_path}}
+
 - name: Template and copy iis app´s Dockerfile to directory {{target_path}}
   win_template:
     src: "templates/Dockerfile-iis-server.j2"

@@ -8,3 +8,5 @@ RUN powershell -Command `
 EXPOSE 80
 
 ENTRYPOINT ["C:\\ServiceMonitor.exe", "w3svc"]
+
+COPY contents/* C:\inetpub\wwwroot\
