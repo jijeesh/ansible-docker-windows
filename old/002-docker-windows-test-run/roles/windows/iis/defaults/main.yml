@@ -1,0 +1,10 @@
+---
+app_name: iis-server
+app_port: 80
+app_host_port: 8010
+docker_windows_iis_image: "mcr.microsoft.com/windows/servercore/iis:windowsservercore-{{ windows_version }}"
+docker_windowsservercore_image: "microsoft/windowsservercore:{{ windows_version }}"  # "microsoft/windowsservercore-insider:10.0.17623.1002"
+docker_nanoserver_image: "microsoft/nanoserver:{{ windows_version }}"  # "microsoft/nanoserver-insider:10.0.17623.1002"
+win_docker_pull_images: True  # Image core will be pulled when building windows/pause image anyway
+base_path: "C:\\docker\\simpleapp"
+target_path: "{{base_path}}\\{{app_name}}"
