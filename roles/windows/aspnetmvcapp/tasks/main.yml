@@ -1,0 +1,40 @@
+- name: IIS for Windows version
+  debug:
+    msg: "Windows Version: {{ windows_version }} "
+# - name: Pull windows server IIS  image from Docker Hub
+#   win_shell: docker pull {{ docker_windows_iis_image }}
+#   when: win_docker_pull_images
+
+# Prepare for the Docker build...
+- name: Create directory {{target_path}}, if not there
+  win_file: path={{target_path}} state=directory
+
+- name: Copy the contents into {{target_path}}
+  win_copy: src=files/contents dest={{target_path}}
+
+- name: Template and copy iis app´s Dockerfile to directory {{target_path}}
+  win_template:
+    src: "templates/Dockerfile-iis-server.j2"
+    dest: "{{target_path}}\\Dockerfile"
+
+# Cleanup old Docker containers & images
+- name: Stop the Service´ Docker container
+  win_shell: docker stop {{app_name}}
+  ignore_errors: yes
+
+- name: Remove the Service´ Docker container
+  win_shell: docker rm {{app_name}} --force
+  ignore_errors: yes
+
+- name: Remove the Service´ Docker image
+  win_shell: docker rmi {{app_name}}:latest --force
+  ignore_errors: yes
+
+  # Build & run our iis server App
+- name: Build the Service´ Docker image
+  win_shell: docker build . --tag {{app_name}}:latest
+  args:
+    chdir: "{{target_path}}"
+
+- name: Run the IIS Service Docker container
+  win_shell: "docker run -d --publish {{app_host_port}}:{{app_port}} --name={{app_name}} --restart=unless-stopped {{app_name}}:latest"
