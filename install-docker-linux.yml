@@ -1,0 +1,9 @@
+- name: Install Docker on Linux nodes
+  hosts: node-ubuntu
+  environment: "{{ env_vars|default({}) }}"
+  gather_facts: yes
+  tasks:
+    - import_role:
+        name: linux/docker
+      tags:
+        - linux::docker

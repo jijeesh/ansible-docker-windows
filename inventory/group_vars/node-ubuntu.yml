@@ -1,0 +1,5 @@
+ansible_user: test
+ansible_ssh_pass: password1#
+ansible_become_pass: password1#
+ansible_port : 22
+# ansible_password: password1#

@@ -1,17 +1,19 @@
-- name: Install Docker on windows nodes
-  hosts: node-windows
-  environment: "{{ env_vars|default({}) }}"
-  gather_facts: no
+- name: Install Docker on Ubuntu nodes
+  hosts: node-ubuntu
+  gather_facts: yes
+  become: yes
   tasks:
     - import_role:
-        name: windows/common
+        name: common/gather-facts
       tags:
-        - windows::requirements
-    - import_role:
-        name: windows/docker
-      tags:
-        - windows::requirements
-        - windows::docker
+        - common::os
+    # - import_role:
+    #     name: windows/run-test
+    #   tags:
+    #     - windows::requirements
+    #     - windows::docker
+    #     - windows::test
+
     # - import_role:
     #     name: windows/cni
     #   tags:
