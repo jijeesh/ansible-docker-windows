@@ -1,0 +1,85 @@
+---
+- name: debug specified user's {{ansible_env.HOME}} home dir through ansible.env
+  debug: var=ansible_env.HOME
+
+- name: Ensure mssql dirs exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    recurse: yes
+  with_items:
+    - "{{ target_path }}/data"
+    - "{{ target_path }}/backups"
+    - "{{ target_path }}/scripts"
+
+- name: Copy files
+  copy:
+   src: conf
+   dest: "{{ target_path }}/"
+   # recursive: True
+   # delete: True
+
+- name: Copy backup file
+  copy:
+   src: scripts
+   dest: "{{ target_path }}/"
+   # recursive: True
+   # delete: True
+
+- name: Copy mssql config files
+  template:
+    src: "templates/Dockerfile.j2"
+    dest: "{{ target_path }}/Dockerfile"
+    force: yes
+
+# - name: Create mssql network
+#   docker_network:
+#     name: "{{ mssql_network }}"
+#     state: present
+#
+# - name: Build image for mssql
+#   docker_image:
+#      path: "{{ target_path }}"
+#      name: mymssql
+
+
+
+# Cleanup old Docker containers & images
+- name: Stop the Service´ Docker container
+  shell: docker stop {{app_name}}
+  ignore_errors: yes
+
+- name: Remove the Service´ Docker container
+  shell: docker rm {{app_name}} --force
+  ignore_errors: yes
+
+- name: Remove the Service´ Docker image
+  shell: docker rmi {{app_name}}:latest --force
+  ignore_errors: yes
+
+  # Build & run our iis server App
+- name: Build the Service´ Docker image
+  shell: docker build . --tag {{app_name}}:latest
+  args:
+    chdir: "{{target_path}}"
+
+- name: Run the MsSql Service Docker container
+  shell: "docker run -d --publish {{app_host_port}}:{{app_port}} -e 'SA_PASSWORD=test1234' -v '{{target_path}}/data:/var/opt/mssql/data' -v '{{target_path}}/backups:/var/backups/'   --name={{app_name}} --restart=unless-stopped {{app_name}}:latest"
+
+# - name: Run mssql  server
+#   docker_container:
+#     env:
+#       SA_PASSWORD: "{{ mssql_root_password }}"
+#     image: mymssql:latest
+#     labels:
+#       traefik.enable: "false"
+#     name: "{{ app_name }}"
+#     networks:
+#       - name: "{{ mssql_network }}"
+#     ports:
+#       - "{{ app_host_port }}:{{app_port}}"
+#     restart_policy: always
+#     state: "{{ mssql_state }}"
+#     volumes:
+#       - "{{ target_path }}/backups:/var/backups/"
+#       - "{{ target_path }}/data:/var/opt/mssql/data"

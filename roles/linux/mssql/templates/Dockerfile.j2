@@ -1,0 +1,22 @@
+FROM microsoft/mssql-server-linux
+MAINTAINER Jijeesh
+
+RUN apt-get update && \
+    apt-get -y install unzip && \
+    apt-get -y install supervisor cron procps
+RUN mkdir -p /var/log/supervisor
+
+
+COPY scripts/backupscript.sh /
+COPY conf/mssql.conf /var/opt/mssql/
+ADD conf/supervisord.conf /etc/supervisor/supervisord.conf
+ADD conf/supervisor/*.conf /etc/supervisor/conf.d/
+
+ADD conf/crontab /var/spool/cron/crontabs/root
+RUN chmod 0600 /var/spool/cron/crontabs/root \
+	&& chown root:crontab /var/spool/cron/crontabs/root
+
+VOLUME /var/opt/mssql/data
+VOLUME /var/backups/
+ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf", "-n"]
+#CMD [ "/opt/mssql/bin/sqlservr" ]

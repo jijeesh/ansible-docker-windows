@@ -1,0 +1,12 @@
+---
+mssql_network: mysql
+mssql_state: started
+app_name: mssql
+app_port: 1433
+app_host_port: 1433
+base_path: "{{ansible_env.HOME}}/docker/apps"
+target_path: "{{base_path}}/{{app_name}}"
+mssql_backups_dir: "{{target_path}}/backups"
+mssql_conf_dir: "{{target_path}}/conf"
+mssql_lib_dir: /var/mysql/lib
+mssql_root_password: 'testst1234'
